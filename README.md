@@ -59,9 +59,6 @@ All seeded users use the password `Password123`.
   - `/api/admin/variants`
   - `/api/admin/images`
 
-Detailed request payloads, query parameters, and response shapes are documented in
-[`docs/api-endpoints.md`](docs/api-endpoints.md).
-
 ## Architecture
 
 The API keeps controllers thin and pushes domain behavior into services and repositories.
