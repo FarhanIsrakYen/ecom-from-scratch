@@ -38,6 +38,10 @@ All seeded users use the password `Password123`.
 ## API Endpoints
 
 - `GET /api/health`
+- `GET /api/products`
+- `GET /api/products/{slug}`
+- `GET /api/categories`
+- `GET /api/brands`
 - `POST /api/auth/register`
 - `POST /api/auth/login`
 - `POST /api/auth/logout` with `Authorization: Bearer <token>`
@@ -48,6 +52,15 @@ All seeded users use the password `Password123`.
 - `GET /api/super-admin/health` with `super_admin` role
 - `GET /api/admin/health` with `admin` role, also accessible by `super_admin`
 - `GET /api/customer/health` with `customer` role
+- Admin catalog CRUD with `admin` or `super_admin` role:
+  - `/api/admin/categories`
+  - `/api/admin/brands`
+  - `/api/admin/products`
+  - `/api/admin/variants`
+  - `/api/admin/images`
+
+Detailed request payloads, query parameters, and response shapes are documented in
+[`docs/api-endpoints.md`](docs/api-endpoints.md).
 
 ## Architecture
 
