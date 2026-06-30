@@ -1,13 +1,25 @@
 <?php
 
+use App\Http\Controllers\Api\V1\Admin\BrandController as AdminBrandController;
+use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
+use App\Http\Controllers\Api\V1\Admin\ProductImageController as AdminProductImageController;
+use App\Http\Controllers\Api\V1\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Api\V1\AuthController;
+use App\Http\Controllers\Api\V1\BrandController;
+use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\ProductController;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('health', HealthController::class);
+Route::get('products', [ProductController::class, 'index']);
+Route::get('products/{slug}', [ProductController::class, 'show']);
+Route::get('categories', [CategoryController::class, 'index']);
+Route::get('brands', [BrandController::class, 'index']);
 
 Route::prefix('auth')->group(function (): void {
     Route::post('register', [AuthController::class, 'register']);
@@ -39,6 +51,16 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('super-admin/health', HealthController::class)->middleware('role:super_admin');
     Route::get('admin/health', HealthController::class)->middleware('role:admin');
     Route::get('customer/health', HealthController::class)->middleware('role:customer');
+
+    Route::prefix('admin')
+        ->middleware('role:super_admin,admin')
+        ->group(function (): void {
+            Route::apiResource('categories', AdminCategoryController::class);
+            Route::apiResource('brands', AdminBrandController::class);
+            Route::apiResource('products', AdminProductController::class);
+            Route::apiResource('variants', AdminProductVariantController::class);
+            Route::apiResource('images', AdminProductImageController::class);
+        });
 });
 
 Route::prefix('v1')->group(function (): void {
