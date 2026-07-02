@@ -2,12 +2,15 @@
 
 use App\Http\Controllers\Api\V1\Admin\BrandController as AdminBrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BrandController;
+use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CategoryController;
+use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Models\User;
@@ -52,6 +55,13 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('admin/health', HealthController::class)->middleware('role:admin');
     Route::get('customer/health', HealthController::class)->middleware('role:customer');
 
+    Route::get('cart', [CartController::class, 'show']);
+    Route::post('cart/items', [CartController::class, 'store']);
+    Route::put('cart/items/{item}', [CartController::class, 'update']);
+    Route::delete('cart/items/{item}', [CartController::class, 'destroy']);
+    Route::delete('cart', [CartController::class, 'clear']);
+    Route::post('checkout', [CheckoutController::class, 'store']);
+
     Route::prefix('admin')
         ->middleware('role:super_admin,admin')
         ->group(function (): void {
@@ -60,6 +70,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::apiResource('products', AdminProductController::class);
             Route::apiResource('variants', AdminProductVariantController::class);
             Route::apiResource('images', AdminProductImageController::class);
+            Route::get('inventory', [AdminInventoryController::class, 'index']);
+            Route::post('inventory/adjustments', [AdminInventoryController::class, 'adjust']);
         });
 });
 

@@ -53,6 +53,14 @@ class Product extends Model
     }
 
     /**
+     * @return HasMany<Inventory, $this>
+     */
+    public function inventories(): HasMany
+    {
+        return $this->hasMany(Inventory::class);
+    }
+
+    /**
      * @return HasMany<ProductImage, $this>
      */
     public function images(): HasMany
