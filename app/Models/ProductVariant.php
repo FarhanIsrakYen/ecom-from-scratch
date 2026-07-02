@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 #[Fillable(['product_id', 'sku', 'attributes', 'price', 'stock'])]
 class ProductVariant extends Model
@@ -20,6 +21,14 @@ class ProductVariant extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    /**
+     * @return HasOne<Inventory, $this>
+     */
+    public function inventory(): HasOne
+    {
+        return $this->hasOne(Inventory::class, 'product_variant_id');
     }
 
     protected function casts(): array

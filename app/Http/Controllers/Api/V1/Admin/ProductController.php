@@ -61,7 +61,7 @@ class ProductController extends Controller
         Gate::authorize('view', $product);
 
         return $this->success(
-            new ProductResource($product->load(['category', 'brand', 'variants', 'images'])),
+            new ProductResource($product->load(['category', 'brand', 'variants.inventory', 'images'])),
             'Product retrieved.',
         );
     }

@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\DB;
 
 class ProductService
 {
+    public function __construct(private readonly InventoryService $inventory) {}
+
     public function paginate(array $filters = []): CursorPaginator
     {
         return $this->filteredQuery($filters, $filters['status'] ?? 'active')
@@ -53,7 +55,7 @@ class ProductService
     public function findBySlug(string $slug): Product
     {
         return Product::query()
-            ->with(['category', 'brand', 'variants', 'images'])
+            ->with(['category', 'brand', 'variants.inventory', 'images'])
             ->where('slug', $slug)
             ->firstOrFail();
     }
@@ -69,14 +71,29 @@ class ProductService
             $product = Product::query()->create($data);
 
             if ($variants !== []) {
-                $product->variants()->createMany($variants);
+                foreach ($variants as $variantData) {
+                    $initialStock = (int) ($variantData['stock'] ?? 0);
+                    $variantData['stock'] = 0;
+                    $variant = $product->variants()->create($variantData);
+
+                    if ($initialStock > 0) {
+                        $this->inventory->increaseStock(
+                            $product->id,
+                            $variant->id,
+                            $initialStock,
+                            'Initial variant stock',
+                            'product',
+                            $product->id,
+                        );
+                    }
+                }
             }
 
             if ($images !== []) {
                 $this->createImages($product, $images);
             }
 
-            return $product->load(['category', 'brand', 'variants', 'images']);
+            return $product->load(['category', 'brand', 'variants.inventory', 'images']);
         });
     }
 
@@ -84,7 +101,7 @@ class ProductService
     {
         $product->update($data);
 
-        return $product->refresh()->load(['category', 'brand', 'variants', 'images']);
+        return $product->refresh()->load(['category', 'brand', 'variants.inventory', 'images']);
     }
 
     public function delete(Product $product): void

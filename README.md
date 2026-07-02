@@ -52,12 +52,22 @@ All seeded users use the password `Password123`.
 - `GET /api/super-admin/health` with `super_admin` role
 - `GET /api/admin/health` with `admin` role, also accessible by `super_admin`
 - `GET /api/customer/health` with `customer` role
+- Customer cart and checkout with `Authorization: Bearer <token>`:
+  - `GET /api/cart`
+  - `POST /api/cart/items`
+  - `PUT /api/cart/items/{id}`
+  - `DELETE /api/cart/items/{id}`
+  - `DELETE /api/cart`
+  - `POST /api/checkout`
 - Admin catalog CRUD with `admin` or `super_admin` role:
   - `/api/admin/categories`
   - `/api/admin/brands`
   - `/api/admin/products`
   - `/api/admin/variants`
   - `/api/admin/images`
+- Admin inventory management with `admin` or `super_admin` role:
+  - `GET /api/admin/inventory`
+  - `POST /api/admin/inventory/adjustments`
 
 Detailed request payloads, query parameters, and response shapes are documented in
 [`docs/api-endpoints.md`](docs/api-endpoints.md).
