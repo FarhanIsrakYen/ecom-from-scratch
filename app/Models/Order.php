@@ -14,6 +14,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'order_number',
     'status',
     'payment_status',
+    'coupon_id',
+    'coupon_code',
     'subtotal',
     'discount',
     'delivery_charge',
@@ -35,6 +37,16 @@ class Order extends Model
     public function addresses(): HasMany
     {
         return $this->hasMany(OrderAddress::class);
+    }
+
+    public function payments(): HasMany
+    {
+        return $this->hasMany(Payment::class);
+    }
+
+    public function coupon(): BelongsTo
+    {
+        return $this->belongsTo(Coupon::class);
     }
 
     protected function casts(): array

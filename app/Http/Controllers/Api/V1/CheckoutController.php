@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Exceptions\CartException;
+use App\Exceptions\InsufficientStockException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\CheckoutRequest;
 use App\Http\Resources\OrderResource;
@@ -20,7 +21,7 @@ class CheckoutController extends Controller
     {
         try {
             $order = $this->checkout->checkout($request->user(), $request->validated());
-        } catch (CartException $exception) {
+        } catch (CartException|InsufficientStockException $exception) {
             return $this->error($exception->getMessage(), 422);
         }
 
