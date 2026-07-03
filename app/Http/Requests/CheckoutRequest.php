@@ -14,7 +14,7 @@ class CheckoutRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'delivery_charge' => ['sometimes', 'numeric', 'min:0'],
+            'coupon_code' => ['sometimes', 'string', 'max:255'],
             'shipping_address' => ['required', 'array'],
             'shipping_address.name' => ['required', 'string', 'max:255'],
             'shipping_address.phone' => ['required', 'string', 'max:50'],

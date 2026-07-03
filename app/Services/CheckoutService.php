@@ -14,6 +14,8 @@ class CheckoutService
         private readonly CartService $cartService,
         private readonly OrderService $orderService,
         private readonly StockReservationService $stockReservation,
+        private readonly PricingService $pricingService,
+        private readonly CouponService $couponService,
     ) {}
 
     public function checkout(User $user, array $data): Order
@@ -26,13 +28,16 @@ class CheckoutService
             }
 
             foreach ($cart->items as $item) {
+                $this->cartService->assertPurchasable($item->product_id, $item->product_variant_id);
                 $this->cartService->assertStockAvailable($item->product_id, $item->product_variant_id, $item->quantity);
             }
 
-            $deliveryCharge = (float) ($data['delivery_charge'] ?? 0);
-            $discount = 0.0;
-            $tax = 0.0;
-            $totals = $this->cartService->calculateSummary($cart->items, $deliveryCharge, $discount, $tax);
+            $totals = $this->pricingService->calculate(
+                $cart->items,
+                $user,
+                $data['shipping_address'],
+                $data['coupon_code'] ?? null,
+            );
             $order = $this->orderService->createPendingOrder($user, $totals);
 
             foreach ($cart->items as $item) {
@@ -48,6 +53,9 @@ class CheckoutService
             }
 
             $this->createAddresses($order, $data);
+            if ($totals['coupon'] !== null && (float) $totals['discount'] > 0) {
+                $this->couponService->recordUsage($totals['coupon'], $user, $order, (float) $totals['discount']);
+            }
             $cart->items()->delete();
 
             return $order->load(['items', 'addresses']);

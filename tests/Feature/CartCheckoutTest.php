@@ -57,6 +57,61 @@ class CartCheckoutTest extends TestCase
             ->assertJsonPath('data.summary.subtotal', '100.00');
     }
 
+    public function test_customer_can_remove_cart_item(): void
+    {
+        $user = $this->userWithRole(RoleEnum::Customer);
+        $variant = ProductVariant::factory()->create(['price' => 15, 'stock' => 0]);
+        app(InventoryService::class)->increaseStock($variant->product_id, $variant->id, 5, 'Initial stock');
+        $token = $user->createToken('phpunit')->plainTextToken;
+
+        $itemId = $this->withToken($token)
+            ->postJson('/api/cart/items', [
+                'product_id' => $variant->product_id,
+                'product_variant_id' => $variant->id,
+                'quantity' => 2,
+            ])
+            ->assertCreated()
+            ->json('data.items.0.id');
+
+        $this->withToken($token)
+            ->deleteJson("/api/cart/items/{$itemId}")
+            ->assertOk()
+            ->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('data.summary.subtotal', '0.00');
+
+        $this->assertDatabaseMissing('cart_items', ['id' => $itemId]);
+    }
+
+    public function test_customer_can_clear_cart(): void
+    {
+        $user = $this->userWithRole(RoleEnum::Customer);
+        $firstVariant = ProductVariant::factory()->create(['price' => 10, 'stock' => 0]);
+        $secondVariant = ProductVariant::factory()->create(['price' => 20, 'stock' => 0]);
+        app(InventoryService::class)->increaseStock($firstVariant->product_id, $firstVariant->id, 5, 'Initial stock');
+        app(InventoryService::class)->increaseStock($secondVariant->product_id, $secondVariant->id, 5, 'Initial stock');
+        $token = $user->createToken('phpunit')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/cart/items', [
+            'product_id' => $firstVariant->product_id,
+            'product_variant_id' => $firstVariant->id,
+            'quantity' => 1,
+        ])->assertCreated();
+
+        $this->withToken($token)->postJson('/api/cart/items', [
+            'product_id' => $secondVariant->product_id,
+            'product_variant_id' => $secondVariant->id,
+            'quantity' => 1,
+        ])->assertCreated();
+
+        $this->withToken($token)
+            ->deleteJson('/api/cart')
+            ->assertOk()
+            ->assertJsonCount(0, 'data.items')
+            ->assertJsonPath('data.summary.total', '0.00');
+
+        $this->assertDatabaseCount('cart_items', 0);
+    }
+
     public function test_checkout_success_reserves_stock_creates_order_and_clears_cart(): void
     {
         $user = $this->userWithRole(RoleEnum::Customer);
@@ -71,13 +126,13 @@ class CartCheckoutTest extends TestCase
         ])->assertCreated();
 
         $orderId = $this->withToken($token)
-            ->postJson('/api/checkout', $this->checkoutPayload(['delivery_charge' => 5]))
+            ->postJson('/api/checkout', $this->checkoutPayload())
             ->assertCreated()
             ->assertJsonPath('data.status', 'awaiting_payment')
             ->assertJsonPath('data.payment_status', 'pending')
             ->assertJsonPath('data.subtotal', '60.00')
-            ->assertJsonPath('data.delivery_charge', '5.00')
-            ->assertJsonPath('data.total', '65.00')
+            ->assertJsonPath('data.delivery_charge', '0.00')
+            ->assertJsonPath('data.total', '60.00')
             ->assertJsonPath('data.items.0.quantity', 2)
             ->json('data.id');
 
@@ -116,6 +171,30 @@ class CartCheckoutTest extends TestCase
             ->postJson('/api/checkout', $this->checkoutPayload())
             ->assertStatus(422)
             ->assertJsonPath('success', false);
+
+        $this->assertDatabaseCount('orders', 0);
+    }
+
+    public function test_checkout_fails_when_cart_product_is_no_longer_purchasable(): void
+    {
+        $user = $this->userWithRole(RoleEnum::Customer);
+        $variant = ProductVariant::factory()->create(['price' => 10, 'stock' => 0]);
+        app(InventoryService::class)->increaseStock($variant->product_id, $variant->id, 2, 'Initial stock');
+        $token = $user->createToken('phpunit')->plainTextToken;
+
+        $this->withToken($token)->postJson('/api/cart/items', [
+            'product_id' => $variant->product_id,
+            'product_variant_id' => $variant->id,
+            'quantity' => 1,
+        ])->assertCreated();
+
+        $variant->product->update(['status' => 'inactive']);
+
+        $this->withToken($token)
+            ->postJson('/api/checkout', $this->checkoutPayload())
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('message', 'Product is not available for purchase.');
 
         $this->assertDatabaseCount('orders', 0);
     }

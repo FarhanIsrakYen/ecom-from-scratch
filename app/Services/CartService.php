@@ -138,7 +138,7 @@ class CartService
         }
     }
 
-    private function assertPurchasable(int $productId, ?int $variantId): void
+    public function assertPurchasable(int $productId, ?int $variantId): void
     {
         $product = Product::query()->whereKey($productId)->where('status', 'active')->first();
 
