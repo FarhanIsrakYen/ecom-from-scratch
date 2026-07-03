@@ -16,6 +16,8 @@ class OrderService
             'order_number' => $this->generateOrderNumber(),
             'status' => OrderStatus::AwaitingPayment,
             'payment_status' => PaymentStatus::Pending,
+            'coupon_id' => $totals['coupon']?->id,
+            'coupon_code' => $totals['coupon_code'],
             'subtotal' => $totals['subtotal'],
             'discount' => $totals['discount'],
             'delivery_charge' => $totals['delivery_charge'],

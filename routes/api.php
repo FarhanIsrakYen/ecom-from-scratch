@@ -2,10 +2,13 @@
 
 use App\Http\Controllers\Api\V1\Admin\BrandController as AdminBrandController;
 use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryController;
+use App\Http\Controllers\Api\V1\Admin\CouponController as AdminCouponController;
+use App\Http\Controllers\Api\V1\Admin\DeliveryZoneController as AdminDeliveryZoneController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController as AdminInventoryController;
 use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductVariantController as AdminProductVariantController;
+use App\Http\Controllers\Api\V1\Admin\TaxSettingController as AdminTaxSettingController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CartController;
@@ -13,6 +16,8 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\StripePaymentController;
+use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -23,6 +28,7 @@ Route::get('products', [ProductController::class, 'index']);
 Route::get('products/{slug}', [ProductController::class, 'show']);
 Route::get('categories', [CategoryController::class, 'index']);
 Route::get('brands', [BrandController::class, 'index']);
+Route::post('stripe/webhook', StripeWebhookController::class);
 
 Route::prefix('auth')->group(function (): void {
     Route::post('register', [AuthController::class, 'register']);
@@ -61,6 +67,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('cart/items/{item}', [CartController::class, 'destroy']);
     Route::delete('cart', [CartController::class, 'clear']);
     Route::post('checkout', [CheckoutController::class, 'store']);
+    Route::post('payments/stripe/checkout-sessions', [StripePaymentController::class, 'createCheckoutSession']);
 
     Route::prefix('admin')
         ->middleware('role:super_admin,admin')
@@ -70,6 +77,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::apiResource('products', AdminProductController::class);
             Route::apiResource('variants', AdminProductVariantController::class);
             Route::apiResource('images', AdminProductImageController::class);
+            Route::apiResource('coupons', AdminCouponController::class);
+            Route::apiResource('delivery-zones', AdminDeliveryZoneController::class);
+            Route::apiResource('tax-settings', AdminTaxSettingController::class);
             Route::get('inventory', [AdminInventoryController::class, 'index']);
             Route::post('inventory/adjustments', [AdminInventoryController::class, 'adjust']);
         });
