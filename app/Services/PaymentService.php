@@ -4,15 +4,12 @@ namespace App\Services;
 
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
-use App\Events\OrderPaid;
-use App\Events\OrderRefunded;
 use App\Exceptions\CartException;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProcessedWebhookEvent;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Event;
 use Stripe\Checkout\Session;
 
 class PaymentService
@@ -20,6 +17,7 @@ class PaymentService
     public function __construct(
         private readonly StripePaymentGateway $stripe,
         private readonly StockReservationService $stockReservation,
+        private readonly OrderStatusService $orderStatusService,
     ) {}
 
     public function createStripeCheckoutSession(User $user, Order $order): array
@@ -201,12 +199,11 @@ class PaymentService
         }
 
         $payment->update(['status' => PaymentStatus::Paid->value]);
-        $order->update([
-            'status' => OrderStatus::Paid,
+        $this->orderStatusService->transition($order, OrderStatus::Paid, null, [
             'payment_status' => PaymentStatus::Paid,
+            'payment' => $payment->refresh(),
+            'note' => 'Payment confirmed.',
         ]);
-
-        Event::dispatch(new OrderPaid($order->refresh(), $payment->refresh()));
     }
 
     private function markFailed(Payment $payment): void
@@ -231,9 +228,10 @@ class PaymentService
         }
 
         $payment->update(['status' => PaymentStatus::Failed->value]);
-        $order->update([
-            'status' => OrderStatus::Cancelled,
+        $this->orderStatusService->transition($order, OrderStatus::Cancelled, null, [
+            'allow_cancellation' => true,
             'payment_status' => PaymentStatus::Failed,
+            'note' => 'Payment failed.',
         ]);
     }
 
@@ -248,12 +246,12 @@ class PaymentService
         $order = Order::query()->whereKey($payment->order_id)->lockForUpdate()->firstOrFail();
 
         $payment->update(['status' => PaymentStatus::Refunded->value]);
-        $order->update([
-            'status' => OrderStatus::Refunded,
+        $this->orderStatusService->transition($order, OrderStatus::Refunded, null, [
+            'refund_flow' => true,
             'payment_status' => PaymentStatus::Refunded,
+            'payment' => $payment->refresh(),
+            'note' => 'Payment refunded.',
         ]);
-
-        Event::dispatch(new OrderRefunded($order->refresh(), $payment->refresh()));
     }
 
     private function findPayment(array $object): ?Payment

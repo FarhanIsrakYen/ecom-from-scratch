@@ -14,8 +14,8 @@ class OrderService
         return Order::query()->create([
             'user_id' => $user->id,
             'order_number' => $this->generateOrderNumber(),
-            'status' => OrderStatus::AwaitingPayment,
-            'payment_status' => PaymentStatus::Pending,
+            'status' => OrderStatus::Pending,
+            'payment_status' => PaymentStatus::Unpaid,
             'coupon_id' => $totals['coupon']?->id,
             'coupon_code' => $totals['coupon_code'],
             'subtotal' => $totals['subtotal'],

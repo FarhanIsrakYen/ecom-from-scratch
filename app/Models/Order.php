@@ -44,6 +44,16 @@ class Order extends Model
         return $this->hasMany(Payment::class);
     }
 
+    public function shipments(): HasMany
+    {
+        return $this->hasMany(Shipment::class);
+    }
+
+    public function statusAudits(): HasMany
+    {
+        return $this->hasMany(OrderStatusAudit::class);
+    }
+
     public function coupon(): BelongsTo
     {
         return $this->belongsTo(Coupon::class);

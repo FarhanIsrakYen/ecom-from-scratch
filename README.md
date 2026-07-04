@@ -60,7 +60,13 @@ All seeded users use the password `Password123`.
   - `DELETE /api/cart/items/{id}`
   - `DELETE /api/cart`
   - `POST /api/checkout`
+  - `GET /api/orders`
+  - `GET /api/orders/{id}`
   - `POST /api/payments/stripe/checkout-sessions`
+- Admin order management with `admin` or `super_admin` role:
+  - `GET /api/admin/orders`
+  - `GET /api/admin/orders/{id}`
+  - `PATCH /api/admin/orders/{id}/status`
 - Admin catalog CRUD with `admin` or `super_admin` role:
   - `/api/admin/categories`
   - `/api/admin/brands`
@@ -133,6 +139,51 @@ All protected endpoints require `Authorization: Bearer <token>`.
 ```
 
 `coupon_code`, `billing_address`, `address_line_2`, `state`, and `postal_code` are optional. Delivery charge and tax are calculated by active delivery zones and tax settings; client-supplied pricing fields are ignored.
+
+### Order Management
+
+Customer order history endpoints require `Authorization: Bearer <token>` and only return the authenticated customer's orders:
+
+```text
+GET /api/orders
+GET /api/orders/{id}
+```
+
+Admin order endpoints require the `admin` or `super_admin` role:
+
+```text
+GET   /api/admin/orders
+GET   /api/admin/orders/{id}
+PATCH /api/admin/orders/{id}/status
+```
+
+`GET /api/admin/orders` supports these optional query parameters:
+
+```text
+status=pending|awaiting_payment|paid|processing|shipped|delivered|cancelled|refunded
+payment_status=unpaid|pending|paid|failed|refunded
+customer=Jane
+customer_id=1
+from_date=2026-07-01
+to_date=2026-07-31
+```
+
+`PATCH /api/admin/orders/{id}/status`
+
+```json
+{
+  "status": "shipped",
+  "note": "Handed off to courier",
+  "allow_cancellation": false,
+  "shipment": {
+    "courier_name": "DHL",
+    "tracking_number": "TRK-123",
+    "shipped_at": "2026-07-05T10:00:00Z"
+  }
+}
+```
+
+`status` is required. `note`, `allow_cancellation`, and `shipment` are optional. Shipment fields are used when moving orders to `shipped` or `delivered`; `shipment.delivered_at` may be supplied for delivery updates.
 
 ### Stripe Payments
 

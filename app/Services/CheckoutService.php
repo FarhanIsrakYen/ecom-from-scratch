@@ -2,11 +2,16 @@
 
 namespace App\Services;
 
+use App\Enums\OrderStatus;
+use App\Enums\PaymentStatus;
+use App\Events\OrderPlaced;
+use App\Jobs\SendOrderStatusNotification;
 use App\Exceptions\CartException;
 use App\Models\CartItem;
 use App\Models\Order;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Event;
 
 class CheckoutService
 {
@@ -16,6 +21,7 @@ class CheckoutService
         private readonly StockReservationService $stockReservation,
         private readonly PricingService $pricingService,
         private readonly CouponService $couponService,
+        private readonly OrderStatusService $orderStatusService,
     ) {}
 
     public function checkout(User $user, array $data): Order
@@ -57,6 +63,14 @@ class CheckoutService
                 $this->couponService->recordUsage($totals['coupon'], $user, $order, (float) $totals['discount']);
             }
             $cart->items()->delete();
+
+            $order = $this->orderStatusService->transition($order, OrderStatus::AwaitingPayment, null, [
+                'payment_status' => PaymentStatus::Pending,
+                'note' => 'Order placed and awaiting payment.',
+            ]);
+
+            Event::dispatch(new OrderPlaced($order));
+            SendOrderStatusNotification::dispatch($order->id, 'placed');
 
             return $order->load(['items', 'addresses']);
         });

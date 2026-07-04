@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryControl
 use App\Http\Controllers\Api\V1\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\DeliveryZoneController as AdminDeliveryZoneController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController as AdminInventoryController;
+use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductVariantController as AdminProductVariantController;
@@ -14,6 +15,7 @@ use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CartController;
 use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckoutController;
+use App\Http\Controllers\Api\V1\CustomerOrderController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\StripePaymentController;
@@ -67,6 +69,8 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::delete('cart/items/{item}', [CartController::class, 'destroy']);
     Route::delete('cart', [CartController::class, 'clear']);
     Route::post('checkout', [CheckoutController::class, 'store']);
+    Route::get('orders', [CustomerOrderController::class, 'index']);
+    Route::get('orders/{order}', [CustomerOrderController::class, 'show']);
     Route::post('payments/stripe/checkout-sessions', [StripePaymentController::class, 'createCheckoutSession']);
 
     Route::prefix('admin')
@@ -80,6 +84,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::apiResource('coupons', AdminCouponController::class);
             Route::apiResource('delivery-zones', AdminDeliveryZoneController::class);
             Route::apiResource('tax-settings', AdminTaxSettingController::class);
+            Route::get('orders', [AdminOrderController::class, 'index']);
+            Route::get('orders/{order}', [AdminOrderController::class, 'show']);
+            Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
             Route::get('inventory', [AdminInventoryController::class, 'index']);
             Route::post('inventory/adjustments', [AdminInventoryController::class, 'adjust']);
         });
