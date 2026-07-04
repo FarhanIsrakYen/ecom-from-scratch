@@ -20,8 +20,11 @@ class OrderResource extends JsonResource
             'delivery_charge' => $this->delivery_charge,
             'tax' => $this->tax,
             'total' => $this->total,
+            'customer' => new UserResource($this->whenLoaded('user')),
             'items' => OrderItemResource::collection($this->whenLoaded('items')),
             'addresses' => OrderAddressResource::collection($this->whenLoaded('addresses')),
+            'shipments' => ShipmentResource::collection($this->whenLoaded('shipments')),
+            'status_audits' => OrderStatusAuditResource::collection($this->whenLoaded('statusAudits')),
             'created_at' => $this->created_at?->toISOString(),
             'updated_at' => $this->updated_at?->toISOString(),
         ];
