@@ -44,7 +44,6 @@ class AuthService
             if (! $user->hasVerifiedEmail()) {
                 $user->sendEmailVerificationNotification();
             }
-
             return [
                 'user' => $user->load('roles'),
                 'token' => $user->createToken($data->deviceName)->plainTextToken,
