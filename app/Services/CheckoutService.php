@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentStatus;
 use App\Events\OrderPlaced;
-use App\Jobs\SendOrderStatusNotification;
 use App\Exceptions\CartException;
 use App\Models\CartItem;
 use App\Models\Order;
@@ -70,7 +69,6 @@ class CheckoutService
             ]);
 
             Event::dispatch(new OrderPlaced($order));
-            SendOrderStatusNotification::dispatch($order->id, 'placed');
 
             return $order->load(['items', 'addresses']);
         });

@@ -12,6 +12,8 @@ abstract class TestCase extends BaseTestCase
 
         config([
             'cache.default' => 'array',
+            'cache.public_store' => 'array',
+            'cache.public_fallback_store' => 'array',
             'queue.default' => 'sync',
         ]);
     }

@@ -10,7 +10,6 @@ use App\Events\OrderPaid;
 use App\Events\OrderProcessingStarted;
 use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
-use App\Jobs\SendOrderStatusNotification;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Shipment;
@@ -56,7 +55,6 @@ class OrderStatusService
 
             $order = $order->refresh()->load(['items', 'addresses', 'shipments', 'statusAudits']);
             $this->dispatchStatusEvent($order, $to, $shipment, $options['payment'] ?? null);
-            SendOrderStatusNotification::dispatch($order->id, $to->value);
 
             return $order;
         });
