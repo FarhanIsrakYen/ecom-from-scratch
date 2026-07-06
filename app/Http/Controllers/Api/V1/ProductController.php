@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api\V1;
 use App\Http\Controllers\Concerns\BuildsCursorPaginationMeta;
 use App\Http\Controllers\Controller;
 use App\Http\Resources\ProductResource;
+use App\Services\ProductCacheService;
 use App\Services\ProductService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -15,11 +16,14 @@ class ProductController extends Controller
     use ApiResponse;
     use BuildsCursorPaginationMeta;
 
-    public function __construct(private readonly ProductService $products) {}
+    public function __construct(
+        private readonly ProductService $products,
+        private readonly ProductCacheService $cache,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
-        $paginator = $this->products->paginate($request->validate([
+        $filters = $request->validate([
             'category' => ['sometimes', 'string'],
             'brand' => ['sometimes', 'string'],
             'min_price' => ['sometimes', 'numeric', 'min:0'],
@@ -29,20 +33,38 @@ class ProductController extends Controller
             'sort' => ['sometimes', 'string', 'in:latest,price_low_to_high,price_high_to_low'],
             'per_page' => ['sometimes', 'integer', 'min:1', 'max:100'],
             'cursor' => ['sometimes', 'string'],
-        ]));
+        ]);
+
+        $callback = function () use ($filters, $request): array {
+            $paginator = $this->products->paginate($filters);
+
+            return [
+                'data' => ProductResource::collection($paginator->items())->resolve($request),
+                'meta' => $this->cursorPaginationMeta($paginator),
+            ];
+        };
+
+        $payload = array_key_exists('featured', $filters) && filter_var($filters['featured'], FILTER_VALIDATE_BOOLEAN)
+            ? $this->cache->rememberFeatured($filters, $callback)
+            : $this->cache->rememberListing($filters, $callback);
 
         return $this->success(
-            ProductResource::collection($paginator->items()),
+            $payload['data'],
             'Products retrieved.',
             200,
-            $this->cursorPaginationMeta($paginator),
+            $payload['meta'],
         );
     }
 
     public function show(string $slug): JsonResponse
     {
+        $product = $this->cache->rememberDetail(
+            $slug,
+            fn (): array => (new ProductResource($this->products->findBySlug($slug)))->resolve(request()),
+        );
+
         return $this->success(
-            new ProductResource($this->products->findBySlug($slug)),
+            $product,
             'Product retrieved.',
         );
     }

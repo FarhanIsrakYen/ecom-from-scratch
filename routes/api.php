@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\V1\CategoryController;
 use App\Http\Controllers\Api\V1\CheckoutController;
 use App\Http\Controllers\Api\V1\CustomerOrderController;
 use App\Http\Controllers\Api\V1\HealthController;
+use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProductController;
 use App\Http\Controllers\Api\V1\StripePaymentController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
@@ -64,6 +65,9 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('customer/health', HealthController::class)->middleware('role:customer');
 
     Route::get('cart', [CartController::class, 'show']);
+    Route::get('notifications', [NotificationController::class, 'index']);
+    Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
+    Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
     Route::post('cart/items', [CartController::class, 'store']);
     Route::put('cart/items/{item}', [CartController::class, 'update']);
     Route::delete('cart/items/{item}', [CartController::class, 'destroy']);

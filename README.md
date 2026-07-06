@@ -55,6 +55,9 @@ All seeded users use the password `Password123`.
 - `GET /api/customer/health` with `customer` role
 - Customer cart and checkout with `Authorization: Bearer <token>`:
   - `GET /api/cart`
+  - `GET /api/notifications`
+  - `PATCH /api/notifications/{id}/read`
+  - `PATCH /api/notifications/read-all`
   - `POST /api/cart/items`
   - `PUT /api/cart/items/{id}`
   - `DELETE /api/cart/items/{id}`
@@ -184,6 +187,50 @@ to_date=2026-07-31
 ```
 
 `status` is required. `note`, `allow_cancellation`, and `shipment` are optional. Shipment fields are used when moving orders to `shipped` or `delivered`; `shipment.delivered_at` may be supplied for delivery updates.
+
+### In-App Notifications
+
+Customer notification endpoints require `Authorization: Bearer <token>` and only return the authenticated user's notifications:
+
+```text
+GET   /api/notifications
+GET   /api/notifications?unread=1
+PATCH /api/notifications/{id}/read
+PATCH /api/notifications/read-all
+```
+
+No request body is required for read/mark-as-read routes.
+
+Notification list response:
+
+```json
+{
+  "success": true,
+  "message": "Notifications retrieved.",
+  "data": [
+    {
+      "id": "9c0a3400-2ee2-4e14-8b5a-555f3f97f8b4",
+      "type": "App\\Notifications\\OrderStatusNotification",
+      "data": {
+        "type": "placed",
+        "title": "Order ORD-20260706-123456 update",
+        "message": "Your order status is now awaiting_payment.",
+        "order_id": 123,
+        "order_number": "ORD-20260706-123456",
+        "status": "awaiting_payment"
+      },
+      "read_at": null,
+      "created_at": "2026-07-06T10:00:00.000000Z"
+    }
+  ],
+  "meta": {
+    "current_page": 1,
+    "per_page": 20,
+    "total": 1,
+    "unread_count": 1
+  }
+}
+```
 
 ### Stripe Payments
 
@@ -321,6 +368,149 @@ The API keeps controllers thin and pushes domain behavior into services and repo
 - `app/Http/Resources` shapes API output.
 - `app/Traits/ApiResponse.php` provides a consistent JSON response contract.
 - `bootstrap/app.php` configures API exception rendering and route middleware aliases.
+
+## Event-Driven Workflows
+
+Domain services dispatch Laravel events for customer and order lifecycle changes. Controllers do not send emails directly.
+
+Events:
+
+- `UserRegistered`
+- `OrderPlaced`
+- `OrderPaid`
+- `OrderShipped`
+- `OrderDelivered`
+- `OrderCancelled`
+- `OrderRefunded`
+- `LowStockDetected`
+
+Queued listeners:
+
+- `SendWelcomeEmail`
+- `SendOrderPlacedEmail`
+- `SendPaymentSuccessEmail`
+- `SendShippingEmail`
+- `SendCancellationEmail`
+- `SendRefundEmail`
+- `NotifyAdminLowStock`
+
+Email and in-app notification work is queued through listeners and queued notifications. Queue jobs use `tries=3`, `timeout=30`, and backoff delays of `10`, `60`, and `300` seconds. Failed jobs are stored in the `failed_jobs` table with `QUEUE_FAILED_DRIVER=database-uuids`.
+
+Redis queue settings:
+
+```env
+QUEUE_CONNECTION=redis
+QUEUE_FAILED_DRIVER=database-uuids
+REDIS_QUEUE_CONNECTION=default
+REDIS_QUEUE=default
+REDIS_QUEUE_RETRY_AFTER=90
+```
+
+`config/horizon.php` is included for Redis queue monitoring when Laravel Horizon is installed and enabled.
+
+## In-App Notifications
+
+Authenticated users can retrieve and mark their database notifications:
+
+```text
+GET   /api/notifications
+GET   /api/notifications?unread=1
+PATCH /api/notifications/{id}/read
+PATCH /api/notifications/read-all
+```
+
+Stored notification `data` payloads:
+
+```json
+{
+  "type": "welcome",
+  "title": "Welcome",
+  "message": "Your customer account is ready."
+}
+```
+
+```json
+{
+  "type": "paid",
+  "title": "Order ORD-20260706-123456 update",
+  "message": "Your order status is now paid.",
+  "order_id": 123,
+  "order_number": "ORD-20260706-123456",
+  "status": "paid"
+}
+```
+
+```json
+{
+  "type": "low_stock",
+  "title": "Low stock detected",
+  "message": "Inventory is below its configured threshold.",
+  "inventory_id": 55,
+  "product_id": 10,
+  "product_variant_id": 20,
+  "available_stock": 2,
+  "low_stock_threshold": 5
+}
+```
+
+## Public Catalog Caching
+
+Public, read-heavy catalog endpoints are cached through Redis when `PUBLIC_CACHE_STORE=redis`. If Redis is unavailable, cache reads and writes fall back to `PUBLIC_CACHE_FALLBACK_STORE` without failing the request. Cache tags are used automatically on stores that support them; other stores use versioned keys for invalidation.
+
+Cached public data:
+
+- Product listings, including featured listings
+- Product detail pages by slug
+- Category tree
+- Brand list
+
+Cache is invalidated when products, product variants, product images, inventory, categories, or brands are created, updated, or deleted. Customer carts, orders, auth payloads, and other private customer data are intentionally not cached in this public catalog layer.
+
+Recommended production settings:
+
+```env
+CACHE_STORE=redis
+PUBLIC_CACHE_STORE=redis
+PUBLIC_CACHE_FALLBACK_STORE=database
+PUBLIC_CACHE_TTL=600
+```
+
+## Query Performance Checks
+
+Use `EXPLAIN` after migrations to confirm the planner is using catalog and order indexes. Examples:
+
+```sql
+EXPLAIN
+SELECT id, name, slug, base_price
+FROM products
+WHERE status = 'active'
+  AND category_id = 1
+ORDER BY created_at DESC, id DESC
+LIMIT 15;
+
+EXPLAIN
+SELECT id, name, slug, base_price
+FROM products
+WHERE status = 'active'
+  AND brand_id = 1
+  AND base_price BETWEEN 25 AND 100
+ORDER BY base_price ASC, id ASC
+LIMIT 15;
+
+EXPLAIN
+SELECT *
+FROM products
+WHERE slug = 'classic-tee'
+LIMIT 1;
+
+EXPLAIN
+SELECT id, order_number, status, payment_status, created_at
+FROM orders
+WHERE status = 'processing'
+  AND payment_status = 'paid'
+ORDER BY created_at DESC
+LIMIT 50;
+```
 
 ## Next Backend Milestones
 

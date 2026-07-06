@@ -6,7 +6,6 @@ use App\Enums\RoleEnum;
 use App\Events\OrderDelivered;
 use App\Events\OrderProcessingStarted;
 use App\Events\OrderShipped;
-use App\Jobs\SendOrderStatusNotification;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\Role;
@@ -107,7 +106,6 @@ class OrderManagementTest extends TestCase
         Event::assertDispatched(OrderProcessingStarted::class);
         Event::assertDispatched(OrderShipped::class);
         Event::assertDispatched(OrderDelivered::class);
-        Queue::assertPushed(SendOrderStatusNotification::class);
     }
 
     public function test_invalid_status_transitions_are_rejected(): void

@@ -17,6 +17,12 @@ return [
 
     'default' => env('CACHE_STORE', 'database'),
 
+    'public_store' => env('PUBLIC_CACHE_STORE', 'redis'),
+
+    'public_fallback_store' => env('PUBLIC_CACHE_FALLBACK_STORE', env('CACHE_STORE', 'database')),
+
+    'public_ttl' => env('PUBLIC_CACHE_TTL', 600),
+
     /*
     |--------------------------------------------------------------------------
     | Cache Stores
