@@ -2,7 +2,6 @@
 
 namespace App\Providers;
 
-use App\Events\UserRegistered;
 use App\Events\LowStockDetected;
 use App\Events\OrderCancelled;
 use App\Events\OrderDelivered;
@@ -10,6 +9,7 @@ use App\Events\OrderPaid;
 use App\Events\OrderPlaced;
 use App\Events\OrderRefunded;
 use App\Events\OrderShipped;
+use App\Events\UserRegistered;
 use App\Listeners\NotifyAdminLowStock;
 use App\Listeners\SendCancellationEmail;
 use App\Listeners\SendOrderPlacedEmail;
@@ -25,6 +25,9 @@ use App\Models\ProductImage;
 use App\Models\ProductVariant;
 use App\Models\User;
 use App\Observers\CatalogCacheObserver;
+use App\Services\AI\AIProviderInterface;
+use App\Services\AI\MockAIProvider;
+use App\Services\AI\OpenAIProvider;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
@@ -36,7 +39,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->app->bind(AIProviderInterface::class, function () {
+            return config('services.ai.provider') === 'mock'
+                ? new MockAIProvider
+                : new OpenAIProvider;
+        });
     }
 
     /**

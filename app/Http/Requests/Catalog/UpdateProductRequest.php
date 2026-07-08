@@ -28,6 +28,8 @@ class UpdateProductRequest extends FormRequest
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:base_price'],
             'status' => ['sometimes', 'string', Rule::in(['active', 'inactive', 'draft'])],
             'is_featured' => ['sometimes', 'boolean'],
+            'average_rating' => ['sometimes', 'numeric', 'min:0', 'max:5'],
+            'reviews_count' => ['sometimes', 'integer', 'min:0'],
         ];
     }
 }
