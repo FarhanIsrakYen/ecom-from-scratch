@@ -25,6 +25,8 @@ class StoreProductRequest extends FormRequest
             'sale_price' => ['nullable', 'numeric', 'min:0', 'lte:base_price'],
             'status' => ['sometimes', 'string', Rule::in(['active', 'inactive', 'draft'])],
             'is_featured' => ['sometimes', 'boolean'],
+            'average_rating' => ['sometimes', 'numeric', 'min:0', 'max:5'],
+            'reviews_count' => ['sometimes', 'integer', 'min:0'],
             'variants' => ['sometimes', 'array'],
             'variants.*.sku' => ['required_with:variants', 'string', 'max:255', Rule::unique('product_variants', 'sku')],
             'variants.*.attributes' => ['required_with:variants', 'array'],

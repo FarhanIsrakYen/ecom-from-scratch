@@ -22,6 +22,8 @@ class ProductResource extends JsonResource
             'sale_price' => $this->sale_price,
             'status' => $this->status,
             'is_featured' => $this->is_featured,
+            'average_rating' => $this->average_rating,
+            'reviews_count' => $this->reviews_count,
             'category' => new CategoryResource($this->whenLoaded('category')),
             'brand' => new BrandResource($this->whenLoaded('brand')),
             'variants' => ProductVariantResource::collection($this->whenLoaded('variants')),

@@ -43,4 +43,17 @@ return [
         'cancel_url' => env('STRIPE_CANCEL_URL', env('FRONTEND_URL', 'http://localhost:3000').'/checkout/cancelled'),
     ],
 
+    'ai' => [
+        'provider' => env('AI_PROVIDER', 'openai'),
+        'mock_response' => null,
+        'mock_assistant_response' => null,
+    ],
+
+    'openai' => [
+        'key' => env('OPENAI_API_KEY'),
+        'model' => env('OPENAI_MODEL', 'gpt-4.1-mini'),
+        'embedding_model' => env('OPENAI_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        'timeout' => env('OPENAI_TIMEOUT', 10),
+    ],
+
 ];

@@ -27,6 +27,8 @@ class ProductFactory extends Factory
             'sale_price' => null,
             'status' => 'active',
             'is_featured' => false,
+            'average_rating' => 0,
+            'reviews_count' => 0,
         ];
     }
 }

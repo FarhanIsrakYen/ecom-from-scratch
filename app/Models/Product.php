@@ -22,6 +22,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
     'sale_price',
     'status',
     'is_featured',
+    'average_rating',
+    'reviews_count',
 ])]
 class Product extends Model
 {
@@ -82,6 +84,8 @@ class Product extends Model
             'base_price' => 'decimal:2',
             'sale_price' => 'decimal:2',
             'is_featured' => 'boolean',
+            'average_rating' => 'decimal:2',
+            'reviews_count' => 'integer',
         ];
     }
 }

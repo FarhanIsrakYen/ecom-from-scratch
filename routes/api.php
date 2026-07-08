@@ -5,11 +5,13 @@ use App\Http\Controllers\Api\V1\Admin\CategoryController as AdminCategoryControl
 use App\Http\Controllers\Api\V1\Admin\CouponController as AdminCouponController;
 use App\Http\Controllers\Api\V1\Admin\DeliveryZoneController as AdminDeliveryZoneController;
 use App\Http\Controllers\Api\V1\Admin\InventoryController as AdminInventoryController;
+use App\Http\Controllers\Api\V1\Admin\KnowledgeBaseController as AdminKnowledgeBaseController;
 use App\Http\Controllers\Api\V1\Admin\OrderController as AdminOrderController;
 use App\Http\Controllers\Api\V1\Admin\ProductController as AdminProductController;
 use App\Http\Controllers\Api\V1\Admin\ProductImageController as AdminProductImageController;
 use App\Http\Controllers\Api\V1\Admin\ProductVariantController as AdminProductVariantController;
 use App\Http\Controllers\Api\V1\Admin\TaxSettingController as AdminTaxSettingController;
+use App\Http\Controllers\Api\V1\AIProductSearchController;
 use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\BrandController;
 use App\Http\Controllers\Api\V1\CartController;
@@ -19,6 +21,8 @@ use App\Http\Controllers\Api\V1\CustomerOrderController;
 use App\Http\Controllers\Api\V1\HealthController;
 use App\Http\Controllers\Api\V1\NotificationController;
 use App\Http\Controllers\Api\V1\ProductController;
+use App\Http\Controllers\Api\V1\ProductSearchController;
+use App\Http\Controllers\Api\V1\ShoppingAssistantController;
 use App\Http\Controllers\Api\V1\StripePaymentController;
 use App\Http\Controllers\Api\V1\StripeWebhookController;
 use App\Models\User;
@@ -27,7 +31,11 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 Route::get('health', HealthController::class);
+Route::post('ai/product-search', AIProductSearchController::class);
+Route::post('ai/assistant', ShoppingAssistantController::class);
 Route::get('products', [ProductController::class, 'index']);
+Route::get('products/search/suggestions', [ProductSearchController::class, 'suggestions']);
+Route::get('products/search/popular', [ProductSearchController::class, 'popular']);
 Route::get('products/{slug}', [ProductController::class, 'show']);
 Route::get('categories', [CategoryController::class, 'index']);
 Route::get('brands', [BrandController::class, 'index']);
@@ -65,6 +73,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
     Route::get('customer/health', HealthController::class)->middleware('role:customer');
 
     Route::get('cart', [CartController::class, 'show']);
+    Route::get('products/search/history', [ProductSearchController::class, 'history']);
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::patch('notifications/read-all', [NotificationController::class, 'markAllAsRead']);
     Route::patch('notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
@@ -93,6 +102,7 @@ Route::middleware('auth:sanctum')->group(function (): void {
             Route::patch('orders/{order}/status', [AdminOrderController::class, 'updateStatus']);
             Route::get('inventory', [AdminInventoryController::class, 'index']);
             Route::post('inventory/adjustments', [AdminInventoryController::class, 'adjust']);
+            Route::post('knowledge-base/sync', [AdminKnowledgeBaseController::class, 'sync']);
         });
 });
 
