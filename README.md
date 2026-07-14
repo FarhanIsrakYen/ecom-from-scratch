@@ -669,11 +669,3 @@ WHERE status = 'processing'
 ORDER BY created_at DESC
 LIMIT 50;
 ```
-
-## Next Backend Milestones
-
-- Product catalog bounded context: brands, categories, products, variants, media, attributes.
-- Inventory reservations and stock movements with transactions.
-- Cart and checkout aggregates with idempotency keys.
-- Payment provider boundary with Stripe implementation later.
-- Search indexing jobs and AI-assisted catalog search.
