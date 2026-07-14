@@ -9,6 +9,7 @@ use App\Models\Order;
 use App\Models\Payment;
 use App\Models\ProcessedWebhookEvent;
 use App\Models\User;
+use App\Support\Monitoring\StructuredLogger;
 use Illuminate\Support\Facades\DB;
 use Stripe\Checkout\Session;
 
@@ -18,6 +19,7 @@ class PaymentService
         private readonly StripePaymentGateway $stripe,
         private readonly StockReservationService $stockReservation,
         private readonly OrderStatusService $orderStatusService,
+        private readonly StructuredLogger $logger,
     ) {}
 
     public function createStripeCheckoutSession(User $user, Order $order): array
@@ -73,6 +75,14 @@ class PaymentService
                 'payload' => $this->stripeObjectToArray($session),
             ]);
 
+            $this->logger->payment('Stripe checkout session created.', [
+                'order_id' => $order->id,
+                'payment_id' => $payment->id,
+                'provider' => 'stripe',
+                'amount' => (float) $payment->amount,
+                'currency' => $payment->currency,
+            ]);
+
             return [
                 'payment' => $payment->refresh(),
                 'checkout_session_id' => $session->id,
@@ -87,11 +97,22 @@ class PaymentService
             $eventId = (string) ($event['id'] ?? '');
             $eventType = (string) ($event['type'] ?? '');
 
+            $this->logger->payment('Stripe webhook received.', [
+                'provider' => 'stripe',
+                'event_id' => $eventId,
+                'event_type' => $eventType,
+            ]);
+
             if ($eventId === '' || $eventType === '') {
                 throw new CartException('Stripe webhook payload is invalid.');
             }
 
             if (ProcessedWebhookEvent::query()->where('provider', 'stripe')->where('event_id', $eventId)->exists()) {
+                $this->logger->payment('Stripe webhook skipped as duplicate.', [
+                    'event_id' => $eventId,
+                    'event_type' => $eventType,
+                ]);
+
                 return false;
             }
 
@@ -113,6 +134,11 @@ class PaymentService
                 'event_id' => $eventId,
                 'event_type' => $eventType,
                 'processed_at' => now(),
+            ]);
+
+            $this->logger->payment('Stripe webhook processed.', [
+                'event_id' => $eventId,
+                'event_type' => $eventType,
             ]);
 
             return true;
@@ -228,6 +254,12 @@ class PaymentService
         }
 
         $payment->update(['status' => PaymentStatus::Failed->value]);
+        $this->logger->payment('Payment failed.', [
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'provider' => $payment->provider,
+            'status' => PaymentStatus::Failed->value,
+        ], 'warning');
         $this->orderStatusService->transition($order, OrderStatus::Cancelled, null, [
             'allow_cancellation' => true,
             'payment_status' => PaymentStatus::Failed,
@@ -246,6 +278,12 @@ class PaymentService
         $order = Order::query()->whereKey($payment->order_id)->lockForUpdate()->firstOrFail();
 
         $payment->update(['status' => PaymentStatus::Refunded->value]);
+        $this->logger->payment('Payment refunded.', [
+            'order_id' => $order->id,
+            'payment_id' => $payment->id,
+            'provider' => $payment->provider,
+            'status' => PaymentStatus::Refunded->value,
+        ]);
         $this->orderStatusService->transition($order, OrderStatus::Refunded, null, [
             'refund_flow' => true,
             'payment_status' => PaymentStatus::Refunded,

@@ -2,27 +2,86 @@ name: CI
 
 on:
   push:
+    branches:
+      - main
   pull_request:
 
+permissions:
+  contents: read
+
 jobs:
-  tests:
+  test:
+    name: Tests and Static Analysis
     runs-on: ubuntu-latest
 
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_DATABASE: ecommerce_testing
+          MYSQL_USER: ecommerce
+          MYSQL_PASSWORD: password
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd="redis-cli ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - uses: shivammathur/setup-php@v2
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
         with:
-          php-version: "8.4"
+          php-version: '8.4'
+          extensions: bcmath, gd, intl, pdo_mysql, redis, zip
           coverage: none
+          tools: composer:v2
 
-      - name: Install dependencies
-        run: composer install --prefer-dist --no-interaction --no-progress
+      - name: Cache Composer dependencies
+        uses: actions/cache@v4
+        with:
+          path: vendor
+          key: composer-${{ runner.os }}-${{ hashFiles('composer.lock') }}
+          restore-keys: |
+            composer-${{ runner.os }}-
 
-      - name: Prepare application
-        run: |
-          cp .env.example .env
-          php artisan key:generate
+      - name: Install Composer dependencies
+        run: composer install --prefer-dist --no-interaction --no-progress --ansi
+
+      - name: Copy testing environment
+        run: cp .env.testing .env
+
+      - name: Generate app key
+        run: php artisan key:generate --ansi
+
+      - name: Run migrations
+        run: php artisan migrate --force --ansi
 
       - name: Run tests
-        run: php artisan test
+        run: php artisan test --ansi
+
+      - name: Run Pint
+        run: vendor/bin/pint --test
+
+      - name: Run Larastan
+        run: vendor/bin/phpstan analyse --memory-limit=1G
+
+      - name: Deployment placeholder
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          echo "Deployment placeholder."
+          echo "Use GitHub secrets such as DEPLOY_HOST, DEPLOY_USER, and DEPLOY_KEY in a real deployment step."

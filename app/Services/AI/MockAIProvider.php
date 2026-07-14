@@ -2,8 +2,8 @@
 
 namespace App\Services\AI;
 
-use RuntimeException;
 use Illuminate\Support\Str;
+use RuntimeException;
 
 class MockAIProvider implements AIProviderInterface
 {

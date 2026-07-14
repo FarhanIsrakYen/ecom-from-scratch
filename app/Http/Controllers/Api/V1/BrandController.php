@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\BrandResource;
-use App\Services\ProductCacheService;
 use App\Services\BrandService;
+use App\Services\ProductCacheService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 

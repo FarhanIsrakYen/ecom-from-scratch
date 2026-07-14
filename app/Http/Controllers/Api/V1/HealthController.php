@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Services\SystemHealthService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -10,12 +11,14 @@ class HealthController extends Controller
 {
     use ApiResponse;
 
-    public function __invoke(): JsonResponse
+    public function __invoke(SystemHealthService $health): JsonResponse
     {
-        return $this->success([
-            'status' => 'ok',
-            'service' => config('app.name'),
-            'environment' => app()->environment(),
-        ], 'Service healthy.');
+        $report = $health->report();
+
+        return $this->success(
+            $report['payload'],
+            $report['healthy'] ? 'Service healthy.' : 'Service degraded.',
+            $report['healthy'] ? 200 : 503,
+        );
     }
 }

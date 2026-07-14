@@ -182,14 +182,14 @@ class OrderManagementTest extends TestCase
         ])->assertCreated();
 
         $orderId = $this->postJson('/api/checkout', [
-                'shipping_address' => [
-                    'name' => 'Jane Customer',
-                    'phone' => '+15555550123',
-                    'address_line_1' => '100 Market Street',
-                    'city' => 'Dhaka',
-                    'country' => 'Bangladesh',
-                ],
-            ])
+            'shipping_address' => [
+                'name' => 'Jane Customer',
+                'phone' => '+15555550123',
+                'address_line_1' => '100 Market Street',
+                'city' => 'Dhaka',
+                'country' => 'Bangladesh',
+            ],
+        ])
             ->assertCreated()
             ->json('data.id');
 

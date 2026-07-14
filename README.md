@@ -1,5 +1,7 @@
 # Ecommerce API
 
+[![CI](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
+
 Production-grade Laravel backend foundation for a scalable e-commerce platform.
 
 ## Stack
@@ -10,21 +12,135 @@ Production-grade Laravel backend foundation for a scalable e-commerce platform.
 - Laravel Sanctum token authentication
 - PHPUnit feature tests
 
+## Project Overview
+
+This repository is a presentation-ready Laravel e-commerce backend built to demonstrate production-grade backend engineering in a YouTube series. The codebase covers the full path from catalog browsing to checkout, payments, admin operations, analytics, AI-assisted search, observability, Dockerized local development, and CI/CD.
+
+Series-friendly themes:
+
+- Building a clean Laravel API with services, DTOs, resources, policies, and request validation.
+- Designing safe checkout and inventory flows with transactions and row-level locking.
+- Integrating Stripe webhooks with idempotency and no sensitive payment logging.
+- Adding catalog caching, search, AI-assisted product discovery, and knowledge-base retrieval.
+- Preparing for production with Docker, CI, rate limiting, monitoring, logs, and scaling documentation.
+
+## Architecture
+
+```mermaid
+flowchart LR
+    Client[Web or Mobile Client] --> LB[Load Balancer]
+    LB --> CDN[CDN for media and public assets]
+    LB --> Nginx[Nginx]
+    Nginx --> API[Laravel API / PHP-FPM]
+
+    API --> Auth[Sanctum Auth and Rate Limits]
+    API --> Services[Domain Services]
+    Services --> Catalog[Catalog and Search]
+    Services --> Checkout[Checkout Service]
+    Services --> Inventory[Inventory Service]
+    Services --> Payments[Payment Service]
+    Services --> AI[AI and Knowledge Base]
+
+    Catalog --> Redis[(Redis Cache)]
+    Checkout --> MySQL[(MySQL Primary)]
+    Inventory --> MySQL
+    Payments --> MySQL
+    API --> Queue[Redis Queue]
+    Queue --> Workers[Queue Workers]
+    Workers --> Mail[Mailpit or SMTP]
+    Workers --> MySQL
+    AI --> OpenAI[AI Provider]
+    Payments --> Stripe[Stripe]
+    API --> Sentry[Sentry]
+    API --> Logs[Structured Logs]
+    MySQL -. scale reads .-> Replicas[(Read Replicas)]
+    CDN --> ObjectStorage[(Object Storage)]
+```
+
+Core production boundaries:
+
+- Controllers validate input, authorize access, and delegate work to services.
+- Checkout, payment webhook handling, stock reservations, and order status transitions use service-level transactions.
+- Stock changes go through centralized inventory and reservation services.
+- Payment webhooks are idempotent by provider event ID.
+- Catalog cache invalidation is handled by observers for products, variants, images, inventory, categories, and brands.
+
 ## Local Setup
 
 ```bash
 cp .env.example .env
-docker compose run --rm app composer install
-docker compose run --rm app php artisan key:generate
-docker compose up -d
-docker compose exec app php artisan migrate --seed
-docker compose exec app php artisan test
+make composer
+make up
+docker compose exec app php artisan key:generate
+make migrate
+make seed
+make test
 ```
+
+The local Docker stack includes:
+
+- `app`: PHP 8.4 FPM Laravel runtime with Composer and required extensions
+- `nginx`: public HTTP entrypoint on `APP_PORT`, default `8000`
+- `mysql`: MySQL 8.4 on `DB_FORWARD_PORT`, default `3306`
+- `redis`: cache and queue backend on `REDIS_FORWARD_PORT`, default `6379`
+- `rabbitmq`: local broker with management UI on `RABBITMQ_MANAGEMENT_FORWARD_PORT`, default `15672`
+- `mailpit`: local SMTP capture with UI on `MAILPIT_FORWARD_PORT`, default `8025`
+
+Useful make commands:
+
+```bash
+make up       # Build and start the local stack
+make down     # Stop and remove local containers
+make migrate  # Run database migrations
+make seed     # Seed local data
+make test     # Run the PHPUnit suite
+make queue    # Run Supervisor-managed queue worker and scheduler
+```
+
+No production secrets are committed. The example values in `.env.example` are local placeholders; change passwords and API keys in your own `.env`.
+
+## Testing
+
+The suite is split by production concern so a focused area can be run without executing unrelated tests:
+
+```bash
+docker compose run --rm app php artisan test --testsuite=Authentication
+docker compose run --rm app php artisan test --testsuite=ProductCatalog
+docker compose run --rm app php artisan test --testsuite=Inventory
+docker compose run --rm app php artisan test --testsuite=CartAndCheckout
+docker compose run --rm app php artisan test --testsuite=PaymentWebhooks
+docker compose run --rm app php artisan test --testsuite=Coupons
+docker compose run --rm app php artisan test --testsuite=Orders
+docker compose run --rm app php artisan test --testsuite=Search
+docker compose run --rm app php artisan test --testsuite=AIFeatures
+```
+
+Tests use factories and `RefreshDatabase`; seeders are avoided except for application seed data during local setup. Stripe, AI, and queue/broker boundaries are faked in tests so the suite does not call real external APIs or message brokers.
+
+Coverage can be generated when the container has Xdebug or PCOV enabled:
+
+```bash
+docker compose run --rm -e XDEBUG_MODE=coverage app php artisan test --coverage
+docker compose run --rm -e XDEBUG_MODE=coverage app php artisan test --coverage-html storage/coverage
+```
+
+## API Documentation
+
+- OpenAPI specification: [`docs/openapi.yaml`](docs/openapi.yaml)
+- Endpoint reference: [`docs/api-endpoints.md`](docs/api-endpoints.md)
+- Production scaling guide: [`docs/production-scaling.md`](docs/production-scaling.md)
 
 API base URL:
 
 ```text
 http://localhost:8000/api
+```
+
+Local service UIs:
+
+```text
+Mailpit:  http://localhost:8025
+RabbitMQ: http://localhost:15672
 ```
 
 ## Seeded Accounts
@@ -428,6 +544,48 @@ Stored notification `data` payloads:
   "message": "Your customer account is ready."
 }
 ```
+
+## Production Monitoring
+
+Sentry is integrated for exception tracking. Configure it with environment variables only; do not commit DSNs or deploy credentials:
+
+```env
+SENTRY_LARAVEL_DSN=
+SENTRY_ENVIRONMENT=production
+SENTRY_RELEASE=git-sha-or-release-version
+SENTRY_TRACES_SAMPLE_RATE=0
+SENTRY_PROFILES_SAMPLE_RATE=0
+```
+
+Every HTTP request receives an `X-Request-Id` response header. The same `request_id` is attached to Laravel logs and Sentry scope tags so API responses, logs, and errors can be correlated.
+
+Structured logs are written for operational events:
+
+- Checkout lifecycle events go to the application daily log.
+- Stripe checkout sessions, payment webhooks, failed payments, and refunds go to `storage/logs/payments-*.log`.
+- Inventory movements go to `storage/logs/inventory-*.log`.
+- Failed jobs are logged as alerts in `storage/logs/failed-jobs-*.log`.
+
+Sensitive fields such as passwords, tokens, secrets, authorization headers, card data, emails, and phone numbers are redacted or masked before custom structured contexts are written. Payment logs intentionally store Stripe event IDs/types and internal order/payment IDs, not full card or provider payloads.
+
+Health check:
+
+```text
+GET /api/health
+```
+
+The response includes app, database, Redis, and queue status. Redis is marked `skipped` when neither cache nor queue uses Redis.
+
+Admin-only log viewer:
+
+```text
+GET /api/admin/system-logs?channel=app&limit=50
+GET /api/admin/system-logs?channel=payments&limit=50
+GET /api/admin/system-logs?channel=inventory&limit=50
+GET /api/admin/system-logs?channel=failed_jobs&limit=50
+```
+
+The endpoint is protected by the existing `admin`/`super_admin` middleware, restricts channels to a fixed allowlist, caps `limit` at 200 lines, and redacts email/phone-like values before returning log lines. For production, prefer a centralized log platform; this endpoint is intended as a constrained operational fallback.
 
 ```json
 {

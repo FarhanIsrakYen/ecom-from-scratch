@@ -8,6 +8,5 @@ final readonly class ResetPasswordData
         public string $email,
         public string $token,
         public string $password,
-    ) {
-    }
+    ) {}
 }

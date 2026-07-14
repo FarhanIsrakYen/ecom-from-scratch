@@ -18,9 +18,7 @@ class AuthController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly AuthService $auth)
-    {
-    }
+    public function __construct(private readonly AuthService $auth) {}
 
     public function register(RegisterRequest $request): JsonResponse
     {
@@ -67,6 +65,13 @@ class AuthController extends Controller
         }
 
         return $this->success(null, 'Password reset link sent.');
+    }
+
+    public function verifyEmail(int $id, string $hash): JsonResponse
+    {
+        $this->auth->verifyEmail($id, $hash);
+
+        return $this->success(null, 'Email verified.');
     }
 
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
