@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
-use App\DTOs\Auth\LoginData;
 use App\DTOs\Auth\ForgotPasswordData;
+use App\DTOs\Auth\LoginData;
 use App\DTOs\Auth\RegisterUserData;
 use App\DTOs\Auth\ResetPasswordData;
 use App\Enums\RoleEnum;
@@ -20,9 +20,7 @@ use Illuminate\Validation\ValidationException;
 
 class AuthService
 {
-    public function __construct(private readonly UserRepository $users)
-    {
-    }
+    public function __construct(private readonly UserRepository $users) {}
 
     /**
      * @return array{user: User, token: string}
@@ -44,6 +42,7 @@ class AuthService
             if (! $user->hasVerifiedEmail()) {
                 $user->sendEmailVerificationNotification();
             }
+
             return [
                 'user' => $user->load('roles'),
                 'token' => $user->createToken($data->deviceName)->plainTextToken,
@@ -83,6 +82,17 @@ class AuthService
         return Password::sendResetLink([
             'email' => $data->email,
         ]);
+    }
+
+    public function verifyEmail(int $userId, string $hash): void
+    {
+        $user = User::query()->findOrFail($userId);
+
+        abort_unless(hash_equals($hash, sha1($user->getEmailForVerification())), 403);
+
+        if (! $user->hasVerifiedEmail()) {
+            $user->markEmailAsVerified();
+        }
     }
 
     public function resetPassword(ResetPasswordData $data): string

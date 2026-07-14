@@ -8,11 +8,14 @@ use App\Exceptions\InsufficientStockException;
 use App\Models\Inventory;
 use App\Models\InventoryMovement;
 use App\Models\ProductVariant;
+use App\Support\Monitoring\StructuredLogger;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class InventoryService
 {
+    public function __construct(private readonly StructuredLogger $logger) {}
+
     public function increaseStock(
         int $productId,
         ?int $variantId,
@@ -147,7 +150,7 @@ class InventoryService
         ?int $referenceId = null,
         ?int $createdBy = null,
     ): InventoryMovement {
-        return InventoryMovement::query()->create([
+        $movement = InventoryMovement::query()->create([
             'product_id' => $inventory->product_id,
             'variant_id' => $inventory->product_variant_id,
             'type' => $type,
@@ -157,6 +160,22 @@ class InventoryService
             'reference_id' => $referenceId,
             'created_by' => $createdBy,
         ]);
+
+        $this->logger->inventory('Inventory movement recorded.', [
+            'inventory_id' => $inventory->id,
+            'product_id' => $inventory->product_id,
+            'product_variant_id' => $inventory->product_variant_id,
+            'movement_id' => $movement->id,
+            'type' => $type->value,
+            'quantity' => $quantity,
+            'reference_type' => $referenceType,
+            'reference_id' => $referenceId,
+            'created_by' => $createdBy,
+            'available_stock' => $inventory->available_stock,
+            'reserved_stock' => $inventory->reserved_stock,
+        ]);
+
+        return $movement;
     }
 
     public function dispatchLowStockIfNeeded(Inventory $inventory): void

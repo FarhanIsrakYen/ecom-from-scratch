@@ -28,8 +28,14 @@ use App\Observers\CatalogCacheObserver;
 use App\Services\AI\AIProviderInterface;
 use App\Services\AI\MockAIProvider;
 use App\Services\AI\OpenAIProvider;
+use App\Support\Monitoring\StructuredLogger;
 use Illuminate\Auth\Notifications\ResetPassword as ResetPasswordNotification;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Queue\Events\JobFailed;
 use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -51,6 +57,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        $this->configureRateLimits();
+
         Event::listen(UserRegistered::class, SendWelcomeEmail::class);
         Event::listen(OrderPlaced::class, SendOrderPlacedEmail::class);
         Event::listen(OrderPaid::class, SendPaymentSuccessEmail::class);
@@ -72,5 +80,30 @@ class AppServiceProvider extends ServiceProvider
 
             return $baseUrl.'/reset-password?token='.$token.'&email='.urlencode($user->email);
         });
+
+        Queue::failing(function (JobFailed $event): void {
+            app(StructuredLogger::class)->failedJob('Queue job failed.', [
+                'connection' => $event->connectionName,
+                'queue' => $event->job->getQueue(),
+                'job_name' => $event->job->resolveName(),
+                'exception' => $event->exception::class,
+                'message' => $event->exception->getMessage(),
+            ]);
+        });
+    }
+
+    private function configureRateLimits(): void
+    {
+        RateLimiter::for('login', fn (Request $request): Limit => Limit::perMinute(5)
+            ->by(strtolower((string) $request->input('email')).'|'.$request->ip()));
+
+        RateLimiter::for('checkout', fn (Request $request): Limit => Limit::perMinute(10)
+            ->by(($request->user()?->id ?? $request->ip()).'|checkout'));
+
+        RateLimiter::for('ai-search', fn (Request $request): Limit => Limit::perMinute(20)
+            ->by(($request->user()?->id ?? $request->ip()).'|ai-search'));
+
+        RateLimiter::for('product-search', fn (Request $request): Limit => Limit::perMinute(120)
+            ->by(($request->user('sanctum')?->id ?? $request->ip()).'|product-search'));
     }
 }

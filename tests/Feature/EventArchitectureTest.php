@@ -15,6 +15,7 @@ use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Models\Role;
 use App\Models\User;
+use App\Notifications\WelcomeNotification;
 use App\Services\InventoryService;
 use Illuminate\Events\CallQueuedListener;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -102,7 +103,7 @@ class EventArchitectureTest extends TestCase
     public function test_authenticated_user_can_read_and_mark_in_app_notifications(): void
     {
         $customer = $this->userWithRole(RoleEnum::Customer);
-        $customer->notify(new \App\Notifications\WelcomeNotification);
+        $customer->notify(new WelcomeNotification);
         Sanctum::actingAs($customer);
 
         $notificationId = $customer->notifications()->firstOrFail()->id;

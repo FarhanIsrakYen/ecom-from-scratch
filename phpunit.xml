@@ -8,8 +8,52 @@
         <testsuite name="Unit">
             <directory>tests/Unit</directory>
         </testsuite>
-        <testsuite name="Feature">
-            <directory>tests/Feature</directory>
+        <testsuite name="Authentication">
+            <file>tests/Feature/AuthTest.php</file>
+        </testsuite>
+        <testsuite name="ProductCatalog">
+            <file>tests/Feature/CatalogTest.php</file>
+            <file>tests/Feature/CatalogCacheTest.php</file>
+        </testsuite>
+        <testsuite name="Inventory">
+            <file>tests/Feature/InventoryTest.php</file>
+        </testsuite>
+        <testsuite name="CartAndCheckout">
+            <file>tests/Feature/CartCheckoutTest.php</file>
+        </testsuite>
+        <testsuite name="PaymentWebhooks">
+            <file>tests/Feature/StripePaymentTest.php</file>
+        </testsuite>
+        <testsuite name="Coupons">
+            <file>tests/Feature/PricingTest.php</file>
+        </testsuite>
+        <testsuite name="Orders">
+            <file>tests/Feature/OrderManagementTest.php</file>
+            <file>tests/Feature/AdminDashboardTest.php</file>
+        </testsuite>
+        <testsuite name="Search">
+            <file>tests/Feature/ProductSearchTest.php</file>
+        </testsuite>
+        <testsuite name="AIFeatures">
+            <file>tests/Feature/AIProductSearchTest.php</file>
+            <file>tests/Feature/ShoppingAssistantTest.php</file>
+        </testsuite>
+        <testsuite name="ValidationAuthorization">
+            <file>tests/Feature/ValidationAndAuthorizationTest.php</file>
+        </testsuite>
+        <testsuite name="ExternalServices">
+            <file>tests/Feature/ExternalServiceIsolationTest.php</file>
+        </testsuite>
+        <testsuite name="Factories">
+            <file>tests/Feature/FactoryCoverageTest.php</file>
+        </testsuite>
+        <testsuite name="EventsAndNotifications">
+            <file>tests/Feature/EventArchitectureTest.php</file>
+        </testsuite>
+        <testsuite name="Health">
+            <file>tests/Feature/HealthCheckTest.php</file>
+            <file>tests/Feature/MonitoringTest.php</file>
+            <file>tests/Feature/ProductionReadinessTest.php</file>
         </testsuite>
     </testsuites>
     <source>

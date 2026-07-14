@@ -52,7 +52,7 @@ class User extends Authenticatable implements MustVerifyEmail
     }
 
     /**
-     * @param array<int, string> $roles
+     * @param  array<int, string>  $roles
      */
     public function hasAnyRole(array $roles): bool
     {

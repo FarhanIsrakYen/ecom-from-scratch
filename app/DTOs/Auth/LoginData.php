@@ -9,6 +9,5 @@ final readonly class LoginData
         public string $password,
         public string $deviceName = 'api',
         public ?string $role = null,
-    ) {
-    }
+    ) {}
 }
